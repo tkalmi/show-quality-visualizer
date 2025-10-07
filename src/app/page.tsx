@@ -5,6 +5,7 @@ import { useQuery } from '@/hooks/useQuery';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 import {
   Table,
   TableBody,
@@ -101,19 +102,27 @@ export default function Home() {
               ))}
             {!isLoading &&
               (data?.results || []).map((item) => (
-                <TableRow key={item.id}>
+                <TableRow key={item.id} className="hover:bg-gray-50">
                   <TableCell>
                     {item.poster_path ? (
-                      <img
-                        src={`https://image.tmdb.org/t/p/w92${item.poster_path}`}
-                        alt={item.name}
-                        className="w-12 h-16 object-cover rounded"
-                      />
+                      <Link href={`/tv/${item.id}`}>
+                        <img
+                          src={`https://image.tmdb.org/t/p/w92${item.poster_path}`}
+                          alt={item.name}
+                          className="w-12 h-16 object-cover rounded"
+                        />
+                      </Link>
                     ) : (
-                      <div className="w-12 h-16 bg-gray-100 rounded" />
+                      <Link href={`/tv/${item.id}`}>
+                        <div className="w-12 h-16 bg-gray-100 rounded" />
+                      </Link>
                     )}
                   </TableCell>
-                  <TableCell className="font-semibold">{item.name}</TableCell>
+                  <TableCell className="font-semibold">
+                    <Link href={`/tv/${item.id}`} className="hover:underline">
+                      {item.name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-gray-500">
                     {item.first_air_date || '—'}
                   </TableCell>
