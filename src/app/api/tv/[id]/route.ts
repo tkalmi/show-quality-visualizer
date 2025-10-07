@@ -5,9 +5,9 @@ const TMDB_TV_DETAILS_URL = (id: string) =>
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = params.id;
+  const { id } = await params;
   if (!id) {
     return new Response(JSON.stringify({ error: 'Missing TV series id.' }), {
       status: 400,

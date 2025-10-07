@@ -5,9 +5,9 @@ const TMDB_TV_SEASON_URL = (id: string, seasonNumber: string) =>
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string; seasonNumber: string } }
+  { params }: { params: Promise<{ id: string; seasonNumber: string }> }
 ) {
-  const { id, seasonNumber } = params;
+  const { id, seasonNumber } = await params;
   if (!id || !seasonNumber) {
     return new Response(
       JSON.stringify({ error: 'Missing tv id or season number.' }),
