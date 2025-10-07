@@ -32,7 +32,12 @@ export function useQuery(
   );
   const queryString = new URLSearchParams(filtered).toString();
   const key = enabled && queryString ? `${path}?${queryString}` : null;
-  const swr = useSWR(key, fetcher, { revalidateOnFocus: false });
+  const swr = useSWR(key, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 60000, // Cache for 1 minute
+    keepPreviousData: true, // Keep previous data while loading new data
+  });
 
   return {
     data: swr.data,

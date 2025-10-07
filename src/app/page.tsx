@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@/hooks/useQuery';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,18 +16,36 @@ import {
 } from '@/components/ui/table';
 // Pagination removed since we render up to 20 results
 
-type TvResult = {
-  id: number;
-  name: string;
-  overview: string;
-  poster_path: string | null;
-  first_air_date?: string;
-};
-
 export default function Home() {
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState('');
   // Pagination state removed
+
+  // Restore search state from localStorage on mount
+  useEffect(() => {
+    const savedQuery = localStorage.getItem('tv-search-query');
+    const savedSubmitted = localStorage.getItem('tv-search-submitted');
+
+    if (savedQuery) {
+      setQuery(savedQuery);
+    }
+    if (savedSubmitted) {
+      setSubmitted(savedSubmitted);
+    }
+  }, []);
+
+  // Save search state to localStorage
+  useEffect(() => {
+    if (query) {
+      localStorage.setItem('tv-search-query', query);
+    }
+  }, [query]);
+
+  useEffect(() => {
+    if (submitted) {
+      localStorage.setItem('tv-search-submitted', submitted);
+    }
+  }, [submitted]);
 
   const { data, isLoading, error } = useQuery(
     '/api/search/tv',
@@ -47,6 +65,13 @@ export default function Home() {
     // reset page would happen here if paginating
   }
 
+  function handleClearSearch() {
+    setQuery('');
+    setSubmitted('');
+    localStorage.removeItem('tv-search-query');
+    localStorage.removeItem('tv-search-submitted');
+  }
+
   return (
     <main className="max-w-4xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-4">TV Search</h1>
@@ -62,6 +87,11 @@ export default function Home() {
         <Button onClick={handleSearch} disabled={!canSearch}>
           {isLoading ? 'Searching…' : 'Search'}
         </Button>
+        {submitted && (
+          <Button variant="outline" onClick={handleClearSearch}>
+            Clear
+          </Button>
+        )}
       </div>
       {error && (
         <div className="text-red-700 mb-3">

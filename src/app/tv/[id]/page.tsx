@@ -2,8 +2,11 @@
 
 import useSWR from 'swr';
 import axios from 'axios';
+import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import EpisodeRatingsChart from '@/components/EpisodeRatingsChart';
 
 type Params = { params: { id: string } };
 
@@ -28,9 +31,70 @@ export default function TvDetailsPage({ params }: Params) {
     revalidateOnFocus: false,
   });
 
+  // Fetch episode ratings per season and log aggregate once main details are loaded
+  useSWR(
+    data?.number_of_seasons ? `/api/tv/${id}/all-seasons` : null,
+    async () => {
+      const seasonNumbers = Array.from(
+        { length: data!.number_of_seasons || 0 },
+        (_, i) => i + 1
+      );
+      const seasonResponses = await Promise.all(
+        seasonNumbers.map((s) =>
+          axios.get(`/api/tv/${id}/season/${s}`).then((r) => r.data)
+        )
+      );
+      // Each season response contains episodes with vote_average; aggregate
+      const episodes = seasonResponses.flatMap((season: any) =>
+        Array.isArray(season.episodes)
+          ? season.episodes.map((e: any) => ({
+              season_number: season.season_number,
+              episode_number: e.episode_number,
+              name: e.name,
+              still_path: e.still_path,
+              vote_average: e.vote_average,
+              vote_count: e.vote_count,
+            }))
+          : []
+      );
+
+      const averageRating =
+        episodes.length > 0
+          ? episodes.reduce(
+              (sum, e) =>
+                sum + (typeof e.vote_average === 'number' ? e.vote_average : 0),
+              0
+            ) / episodes.length
+          : null;
+
+      const bySeason = episodes.reduce<
+        Record<number, { episodes: number; avg: number }>
+      >((acc, e) => {
+        const list = (acc[e.season_number] ||= { episodes: 0, avg: 0 });
+        list.episodes += 1;
+        list.avg += typeof e.vote_average === 'number' ? e.vote_average : 0;
+        return acc;
+      }, {});
+      for (const s of Object.keys(bySeason)) {
+        const info = bySeason[Number(s)];
+        info.avg = info.episodes > 0 ? info.avg / info.episodes : 0;
+      }
+
+      return { episodes, averageRating, bySeason };
+    },
+    { revalidateOnFocus: false }
+  );
+
   if (isLoading) {
     return (
       <main className="max-w-4xl mx-auto p-6">
+        <div className="mb-4">
+          <Link href="/" className="inline-block">
+            <Button variant="outline" size="sm" className="cursor-pointer">
+              ← Back to Search
+            </Button>
+          </Link>
+        </div>
         <div className="flex gap-6">
           <Skeleton className="w-32 h-44 rounded" />
           <div className="flex-1 space-y-3">
@@ -47,6 +111,13 @@ export default function TvDetailsPage({ params }: Params) {
   if (error) {
     return (
       <main className="max-w-4xl mx-auto p-6">
+        <div className="mb-4">
+          <Link href="/" className="inline-block">
+            <Button variant="outline" size="sm" className="cursor-pointer">
+              ← Back to Search
+            </Button>
+          </Link>
+        </div>
         <div className="text-red-700">Failed to load TV show details.</div>
       </main>
     );
@@ -57,6 +128,11 @@ export default function TvDetailsPage({ params }: Params) {
   return (
     <main className="max-w-4xl mx-auto p-6">
       <div className="mb-4">
+        <Link href="/" className="inline-block">
+          <Button variant="outline" size="sm" className="mb-4 cursor-pointer">
+            ← Back to Search
+          </Button>
+        </Link>
         <h1 className="text-2xl font-bold">{data.name}</h1>
         <div className="text-gray-600">
           {data.first_air_date ? `First aired: ${data.first_air_date}` : null}
@@ -110,6 +186,11 @@ export default function TvDetailsPage({ params }: Params) {
               </div>
             </CardContent>
           </Card>
+
+          <EpisodeRatingsChart
+            seriesId={id}
+            totalSeasons={data.number_of_seasons ?? 0}
+          />
         </div>
       </div>
     </main>
